@@ -35,7 +35,7 @@ def main():
 
     # Tokenizer training
     trainer = Llama2GenomeTokenizerTrainer(raw_datasets['train'], train_config)
-    tokenizer = trainer.train_new_tokenizer()
+    tokenizer = trainer.train_tokenizer()
     print("Tokenizer trained successfully.")
     tokenizer.save_pretrained(train_config.TOKENIZER_SAVE_PATH)
     print(f"Tokenizer saved successfully to {train_config.TOKENIZER_SAVE_PATH}.")
