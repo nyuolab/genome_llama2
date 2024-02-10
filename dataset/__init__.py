@@ -1,1 +1,1 @@
-from .tokenized_dataset import Llama2GenomeTokenizedDataset
+from .genome_dataset import GenomeDataset

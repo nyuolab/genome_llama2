@@ -1,7 +1,8 @@
 import pandas as pd
 from datasets import Dataset
+from sklearn.model_selection import train_test_split
 
-class FastaGenomeSequenceProcessor:
+class GenomeSequenceProcessor():
 
     def __init__(self, file_path, train_config):
         self.file_path = file_path
@@ -44,15 +45,12 @@ class FastaGenomeSequenceProcessor:
                 genome_sequence_chunks.append(chunk)
 
         return genome_sequence_chunks
-
-    def create_dataset(self, genome_sequence_chunks):
-        df = pd.DataFrame({
-            'sequence': genome_sequence_chunks
-        })
+    
+    def create_dataset(self, sequences):
+        df = pd.DataFrame(sequences, columns=['sequence'])
         return Dataset.from_pandas(df)
 
-    def split_dataset(self, dataset, train_size, valid_size):
-        train_dataset = dataset[:train_size]
-        valid_dataset = dataset[train_size:valid_size]
-        test_dataset = dataset[valid_size:]
+    def split_dataset(self, dataset, train_size):
+        train_dataset, temp_dataset = train_test_split(dataset, test_size=1-train_size, random_state=self.train_config.SEED)
+        valid_dataset, test_dataset = train_test_split(temp_dataset, test_size=0.5, random_state=self.train_config.SEED)
         return train_dataset, valid_dataset, test_dataset

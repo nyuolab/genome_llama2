@@ -1,38 +1,39 @@
-import torch
+import sys
+sys.path.append("genome_llama2")
+
 from transformers import AutoConfig, LlamaForCausalLM
 from torch.utils.data import DataLoader
-from pytorch_lightning import LightningModule
+from torch.optim.lr_scheduler import OneCycleLR
+from datasets import load_from_disk
+from dataset.genome_dataset import GenomeDataset
+from lightning.pytorch import LightningModule
+from deepspeed.ops.adam import DeepSpeedCPUAdam
 
 class Llama2Genome(LightningModule):
-    def __init__(self, tokenizer, tokenized_dataset, learning_rate, train_config):
+    def __init__(self, tokenizer, train_config):
         super().__init__()
         self.model = None
+        self.tokenized_genome_dataset = None
         self.tokenizer = tokenizer
-        self.tokenized_dataset = tokenized_dataset
-        self.learning_rate = learning_rate
         self.train_config = train_config
 
-    def forward(self, input_ids, attention_mask, label_ids):
-        output = self.model(input_ids, attention_mask=attention_mask, labels=label_ids)
+    def setup(self, stage):
+        self.tokenized_genome_dataset = load_from_disk(self.train_config.TOKENIZED_DATASET_SAVE_PATH)
+        self.genome_train = GenomeDataset(self.tokenized_genome_dataset["train"])
+        self.genome_valid = GenomeDataset(self.tokenized_genome_dataset["valid"])
+        self.genome_test = GenomeDataset(self.tokenized_genome_dataset["test"])
+        self.effective_batch_size = self.train_config.BATCH_SIZE * self.train_config.ACCUMULATE_GRAD_BATCHES
+        self.steps_per_epoch = int(len(self.genome_train) / self.effective_batch_size)
+
+    def forward(self, input_ids, attention_mask, labels):
+        output = self.model(input_ids, attention_mask=attention_mask, labels=labels)
         return output.loss, output.logits
 
-    def _transform_tensors(self, input_tensors):
-        # Assuming all tensors have the same length
-        num_tensors = len(input_tensors)
-        tensor_length = len(input_tensors[0])
-
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # Transposing the tensors
-        output_tensors = [torch.tensor([input_tensors[j][i] for j in range(num_tensors)]) for i in range(tensor_length)]
-
-        return torch.stack(output_tensors).to(device)
-
     def _step(self, batch):
-        input_ids = self._transform_tensors(batch['input_ids'])
-        attention_mask = self._transform_tensors(batch['attention_mask'])
-        labels = self._transform_tensors(batch['label_ids'])
+        input_ids = batch['input_ids']
+        attention_mask = batch['attention_mask']
+        labels = batch['labels']
         loss, _ = self(input_ids, attention_mask, labels)
-        # Write the loss function
         return loss
 
     def training_step(self, batch, batch_idx):
@@ -63,24 +64,32 @@ class Llama2Genome(LightningModule):
         self.model = LlamaForCausalLM(config)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
-        lr_scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10),
-            'monitor': 'val_loss',
-            'frequency': 1,
-            'interval': 'epoch'
-        }
-        return [optimizer], [lr_scheduler]
+        optimizer = DeepSpeedCPUAdam(self.parameters(), 
+                                     lr=self.train_config.LR, 
+                                     betas=self.train_config.BETAS, 
+                                     eps=self.train_config.EPS, 
+                                     weight_decay=self.train_config.WEIGHT_DECAY)
         
-    def _get_dataloader(self, split_name):
-        sampler = torch.utils.data.DistributedSampler(self.tokenized_dataset[split_name], shuffle=True)
-        return DataLoader(self.tokenized_dataset[split_name], batch_size=self.train_config.BATCH_SIZE, num_workers=self.train_config.NUM_WORKERS, sampler=sampler)
+        scheduler = OneCycleLR(
+            optimizer,
+            max_lr = self.train_config.LR, # Upper learning rate boundaries in the cycle for each parameter group
+            steps_per_epoch = self.steps_per_epoch, # The number of steps per epoch to train for.
+            epochs = self.train_config.EPOCHS, # The number of epochs to train for.
+            anneal_strategy = 'cos')
+
+        lr_scheduler = {
+            'scheduler': scheduler,
+            'interval': 'step',
+            'frequency': 1,
+        }
+
+        return [optimizer], [lr_scheduler]
 
     def train_dataloader(self):
-        return self._get_dataloader('train')
+        return DataLoader(self.genome_train, batch_size=self.train_config.BATCH_SIZE, shuffle=True, num_workers=self.train_config.NUM_WORKERS)
 
     def val_dataloader(self):
-        return self._get_dataloader('valid')
+        return DataLoader(self.genome_valid, batch_size=self.train_config.BATCH_SIZE, shuffle=True, num_workers=self.train_config.NUM_WORKERS)
 
     def test_dataloader(self):
-        return self._get_dataloader('test')
+        return DataLoader(self.genome_test, batch_size=self.train_config.BATCH_SIZE, shuffle=True, num_workers=self.train_config.NUM_WORKERS)
