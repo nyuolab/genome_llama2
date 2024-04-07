@@ -1,10 +1,7 @@
-import sys
-sys.path.append("genome_llama2")
-
-from fasta_processor import GenomeSequenceProcessor
 from datasets import DatasetDict
 from transformers import AutoTokenizer
 from config import TrainConfig
+from processor.fasta_processor import GenomeSequenceProcessor
 
 class GenomeSequenceTokenizer():
 
@@ -46,13 +43,11 @@ def tokenize_dataset():
     tokenizer = AutoTokenizer.from_pretrained(train_config.TOKENIZER_SAVE_PATH)
     tokenizer.pad_token = tokenizer.eos_token
 
-    preprocessor = GenomeSequenceProcessor(train_config.RAW_DATA_FILE_PATH, train_config)
-    sequences = preprocessor.process_fasta_file()
-    ds_train, ds_valid, ds_test = preprocessor.split_dataset(sequences, train_config.TRAIN_RATIO)
+    preprocessor = GenomeSequenceProcessor(train_config.RAW_DATA_DIR_PATH, train_config)
+    ds_train, ds_valid = preprocessor.create_and_split_dataset(train_config.TRAIN_RATIO, chunk_size=10000)
     raw_datasets = DatasetDict({
-        "train": preprocessor.create_dataset(ds_train),
-        "valid": preprocessor.create_dataset(ds_valid),
-        "test": preprocessor.create_dataset(ds_test)
+        "train": ds_train,
+        "valid": ds_valid
     })
 
     tokenizer = GenomeSequenceTokenizer(tokenizer, train_config)
