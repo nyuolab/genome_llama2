@@ -8,8 +8,15 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import TensorBoardLogger
 from model.llama2_genome import Llama2Genome
 from config import TrainConfig
+from lightning.pytorch.strategies import DeepSpeedStrategy
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def main():
+
+    torch.set_float32_matmul_precision('medium')
 
     train_config = TrainConfig()
 
@@ -31,25 +38,34 @@ def main():
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         dirpath='llama2_genome_checkpoint',
-        filename='llama2_genome_7b-{val_loss:.2f}',
-        # filename='llama2_genome_13b-{val_loss:.2f}',     # Uncomment for training Llama2 13b model
+        filename='llama2_genome_7b-{epoch:02d}-{step}-{val_loss:.2f}',
         save_top_k=1,
+        every_n_train_steps=103500,
         mode='min',
     )
 
     # Logger
     logger = TensorBoardLogger("llama2_genome_tb_logs", name="llama2_genome_7b")
-    # logger = TensorBoardLogger("llama2_genome_tb_logs", name="llama2_genome_13b")    # Uncomment for training Llama2 13b model
 
     # Define lightning trainer
     trainer = Trainer(
+        num_nodes=train_config.NUM_NODES,
         accelerator="gpu",
         devices=train_config.GPUS,
         max_epochs=train_config.EPOCHS,
         precision=train_config.PRECISION,
-        strategy="deepspeed_stage_2_offload",
-        # strategy="deepspeed_stage_3_offload",    # Uncomment for training Llama2 13b model
-        accumulate_grad_batches=train_config.ACCUMULATE_GRAD_BATCHES,
+        strategy=DeepSpeedStrategy(
+            stage=3,
+            logging_level=logging.DEBUG,
+            zero_optimization=True,
+            allgather_partitions=True, 
+            reduce_scatter=True,
+            allgather_bucket_size=5e8,
+            reduce_bucket_size=5e8,
+            overlap_comm=True,
+            contiguous_memory_optimization=False,
+            synchronize_checkpoint_boundary=True
+        ),
         gradient_clip_val=train_config.GRADIENT_CLIP_VAL,
         callbacks=[checkpoint_callback],
         enable_checkpointing=train_config.ENABLE_CHECKPOINTING,
@@ -57,9 +73,11 @@ def main():
         profiler=train_config.PROFILER
     )
 
-    print("Started training")
+    logging.info("Started training")
+    start_time = time.time()  # Start timing
     trainer.fit(llama2_genome)
-    print("Finished training")
+    end_time = time.time()  # End timing
+    logging.info(f"Finished training, duration: {end_time - start_time:.2f} seconds")
 
 if __name__ == "__main__":
     main()

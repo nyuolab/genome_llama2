@@ -1,56 +1,49 @@
-import pandas as pd
+import os
 from datasets import Dataset
-from sklearn.model_selection import train_test_split
 
-class GenomeSequenceProcessor():
+class GenomeSequenceProcessor:
 
-    def __init__(self, file_path, train_config):
-        self.file_path = file_path
+    def __init__(self, directory, train_config):
+        self.directory = directory
         self.train_config = train_config
-        self.DNA_VALID_NUCLEOTIDES = {'A', 'C', 'G', 'T', 'N'}
 
-    def is_valid_genome_sequence(self, sequence):
-        return all(nucleotide in self.DNA_VALID_NUCLEOTIDES for nucleotide in sequence)
+    def split_sequence_generator(self, sequence, chunk_size):
+        """
+        Split a sequence into chunks of the given size and yield them one by one.
+        """
+        for i in range(0, len(sequence), chunk_size):
+            yield sequence[i:i+chunk_size]
 
-    def parse_fasta_file(self):
-        sequences = []
-        current_sequence = ''
-
-        with open(self.file_path, 'r') as file:
-            for line in file:
-                line = line.strip().upper()
-                if line.startswith('>'):
-                    if current_sequence:
-                        sequences.append(current_sequence)
-                        current_sequence = ''
-                elif self.is_valid_genome_sequence(line):
-                    current_sequence += line
-
-        if current_sequence:
-            sequences.append(current_sequence)
-
-        return sequences
+    def get_nucleotide_sequences(self, chunk_size):
+        for filename in os.listdir(self.directory):
+            if filename.endswith(".fna"):
+                file_path = os.path.join(self.directory, filename)
+                with open(file_path, 'r') as f:
+                    sequence = ''
+                    for line in f:
+                        if not line.startswith('>'):
+                            clean_line = line.upper().strip().replace('N', '')
+                            sequence += clean_line
+                    # Yield sequence chunks instead of extending a list
+                    for chunk in self.split_sequence_generator(sequence, chunk_size):
+                        yield chunk
     
-    def process_fasta_file(self):
-        genome_sequence_chunks = []
-        parsed_fasta = self.parse_fasta_file()
+    def create_and_split_dataset(self, train_size, chunk_size=10000):
+        # Initialize lists to hold training and validation sequences
+        train_sequences = []
+        valid_sequences = []
 
-        for sequence in parsed_fasta:
-            # Adjusted to generate chunks and labels in parallel
-            seq_length = len(sequence)
-            chunk_size = self.train_config.MIN_SEQUENCE_LENGTH
+        # Generate sequences and split them into training and validation sets
+        for sequence in self.get_nucleotide_sequences(chunk_size):
+            # Randomly decide if the sequence goes into the training or validation set
+            # based on the specified training size
+            if len(train_sequences) / (len(train_sequences) + len(valid_sequences) + 1) < train_size:
+                train_sequences.append(sequence)
+            else:
+                valid_sequences.append(sequence)
 
-            for i in range(0, seq_length, chunk_size):
-                chunk = sequence[i:i + chunk_size]
-                genome_sequence_chunks.append(chunk)
+        # Convert lists to datasets
+        train_dataset = Dataset.from_dict({"sequence": train_sequences})
+        valid_dataset = Dataset.from_dict({"sequence": valid_sequences})
 
-        return genome_sequence_chunks
-    
-    def create_dataset(self, sequences):
-        df = pd.DataFrame(sequences, columns=['sequence'])
-        return Dataset.from_pandas(df)
-
-    def split_dataset(self, dataset, train_size):
-        train_dataset, temp_dataset = train_test_split(dataset, test_size=1-train_size, random_state=self.train_config.SEED)
-        valid_dataset, test_dataset = train_test_split(temp_dataset, test_size=0.5, random_state=self.train_config.SEED)
-        return train_dataset, valid_dataset, test_dataset
+        return train_dataset, valid_dataset
