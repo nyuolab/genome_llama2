@@ -1,1 +1,1 @@
-from .train_config import TrainConfig
+from .model_config import ModelConfig
