@@ -1,2 +1,1 @@
-from .fasta_processor import GenomeSequenceProcessor
-from .fasta_tokenizer import GenomeSequenceTokenizer
+from .data_processor import GenomeSequenceProcessor
