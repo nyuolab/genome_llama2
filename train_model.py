@@ -71,16 +71,18 @@ def run(model_config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_data_path", type=str, default="", help="Path to the training data.", required=True)
     parser.add_argument("--tokenized_dataset_path", type=str, default="", help="Path to the tokenized dataset directory.", required=True)
     parser.add_argument("--checkpoint_dir_path", type=str, default="", help="Path to the directory where model checkpoints will be saved during training.", required=True)
     parser.add_argument("--log_dir_path", type=str, default="", help="Path to the directory where training logs and other related outputs will be saved.", required=True)
+    parser.add_argument("--n_nodes", type=int, default=1, help="Number of nodes to be used in the training process.")
+    parser.add_argument("--n_gpus", type=int, default=-1, help="Number of GPUs to be used per node. Use -1 to utilize all available GPUs.")
     args = parser.parse_args()
 
     model_config = ModelConfig()
-    model_config.RAW_TRAIN_DATA_DIR_PATH = args.train_data_path
     model_config.TOKENIZED_DATASET_PATH = args.tokenized_dataset_path
     model_config.CHECKPOINT_DIR = args.checkpoint_dir_path
     model_config.LOG_DIR = args.log_dir_path
+    model_config.NUM_NODES = args.n_nodes
+    model_config.GPUS = args.n_gpus
 
     run(model_config)

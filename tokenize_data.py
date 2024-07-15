@@ -71,7 +71,7 @@ def tokenize_dataset(model_config):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_data_path", type=str, default="", help="Path to the training data.", required=True)
-    parser.add_argument("--tokenized_dataset_path", type=str, default="", help="Path to the tokenized dataset directory.", required=True)
+    parser.add_argument("--tokenized_dataset_path", type=str, default="", help=" Path to the directory where tokenized dataset will be saved.", required=True)
     args = parser.parse_args()
 
     model_config = ModelConfig()
