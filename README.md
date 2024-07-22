@@ -27,5 +27,15 @@ To pre-train the model, use this command:
 python train_model.py --tokenized_dataset_path /path/to/tokenized_dataset --checkpoint_dir_path /path/to/store/checkpoints --log_dir_path /path/to/store/logs
 ```
 
+The full list of flags and options for pre-training Genome-Llama-2 is as follows:
+```
+--tokenized_dataset_path: Path to the tokenized dataset directory.
+--checkpoint_dir_path: Path to the directory where model checkpoints will be saved during training.
+--log_dir_path: Path to the directory where training logs and other related outputs will be saved.
+--n_nodes: Number of nodes to be used in the training process.
+--n_gpus: Number of GPUs to be used per node. Use -1 to utilize all available GPUs.
+--model_size: Size of the model to be used: base, medium, or large.
+```
+
 ## Todos
 - Add code for fine-tuning Genome-Llama-2 on specific dataset.
