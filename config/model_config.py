@@ -14,6 +14,9 @@ class ModelConfig:
     CHECKPOINT_DIR: str = "genome_llama2_checkpoint"
     LOG_DIR: str = "genome_llama2_tb_logs"
 
+    # Model Type
+    MODEL_SIZE: str = "base"
+
     # Training arguments
     STEPS: int = 500000
     NUM_NODES: int = 1

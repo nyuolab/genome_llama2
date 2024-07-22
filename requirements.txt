@@ -1,0 +1,5 @@
+torch==2.2.2
+transformers==4.39.1
+datasets==2.18.0
+lightning==2.2.1
+numpy==1.26.4

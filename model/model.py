@@ -67,12 +67,32 @@ class GenomeLlama2(LightningModule):
             n_ctx=self.model_config.CONTEXT_LENGTH
         )
 
-        # Set the model parameters to align with DNABERT-2 architecture
-        config.num_hidden_layers = 12 # Number of transformer layers
-        config.num_attention_heads = 12 # Number of attention heads
-        config.num_key_value_heads = 12 # Number of key-value heads in attention mechanism
-        config.hidden_size = 768 # Size of hidden layers
-        config.intermediate_size = 3072 # Size of intermediate layers in the feed-forward network
+
+        # Set the model parameters
+        # Total number of parameters: 119 M
+        if(self.model_config.MODEL_SIZE == "base"):
+            # The following model parameters align with DNABERT-2 architecture
+            config.num_hidden_layers = 12 # Number of transformer layers
+            config.num_attention_heads = 12 # Number of attention heads
+            config.num_key_value_heads = 12 # Number of key-value heads in attention mechanism
+            config.hidden_size = 768 # Size of hidden layers
+            config.intermediate_size = 3072 # Size of intermediate layers in the feed-forward network
+
+        # Total number of parameters: 411 M
+        elif(self.model_config.MODEL_SIZE == "medium"):
+            config.num_hidden_layers = 24
+            config.num_attention_heads = 16
+            config.num_key_value_heads = 16
+            config.hidden_size = 1024
+            config.intermediate_size = 4096
+
+        # Total number of parameters: 744 M
+        elif(self.model_config.MODEL_SIZE == "large"):
+            config.num_hidden_layers = 28
+            config.num_attention_heads = 20
+            config.num_key_value_heads = 20
+            config.hidden_size = 1280
+            config.intermediate_size = 5120
 
         # Set the beginning of sequence (bos) and end of sequence (eos) token IDs
         config.bos_token_id=self.tokenizer.bos_token_id
