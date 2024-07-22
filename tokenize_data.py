@@ -72,10 +72,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_data_path", type=str, default="", help="Path to the training data.", required=True)
     parser.add_argument("--tokenized_dataset_path", type=str, default="", help=" Path to the directory where tokenized dataset will be saved.", required=True)
+    parser.add_argument("--context_length", type=int, default=128, help="Context length (number of tokens) in each sequence (default: 128)")
     args = parser.parse_args()
 
     model_config = ModelConfig()
     model_config.RAW_TRAIN_DATA_DIR_PATH = args.train_data_path
     model_config.TOKENIZED_DATASET_PATH = args.tokenized_dataset_path
+    model_config.CONTEXT_LENGTH = args.context_length
 
     tokenize_dataset(model_config)
