@@ -29,4 +29,3 @@ python train_model.py --tokenized_dataset_path /path/to/tokenized_dataset --chec
 
 ## Todos
 - Add code for fine-tuning Genome-Llama-2 on specific dataset.
-- Add requirement.txt file.
