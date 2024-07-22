@@ -76,6 +76,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir_path", type=str, default="", help="Path to the directory where training logs and other related outputs will be saved.", required=True)
     parser.add_argument("--n_nodes", type=int, default=1, help="Number of nodes to be used in the training process.")
     parser.add_argument("--n_gpus", type=int, default=-1, help="Number of GPUs to be used per node. Use -1 to utilize all available GPUs.")
+    parser.add_argument("--model_size", type=str, choices=["base", "medium", "large"], default="base", help="Size of the model to be used: base, medium, or large.")
     args = parser.parse_args()
 
     model_config = ModelConfig()
@@ -84,5 +85,16 @@ if __name__ == "__main__":
     model_config.LOG_DIR = args.log_dir_path
     model_config.NUM_NODES = args.n_nodes
     model_config.GPUS = args.n_gpus
+    model_config.MODEL_SIZE = args.model_size
+
+    if(model_config.MODEL_SIZE == "base"):
+        model_config.BATCH_SIZE = 256
+        model_config.ACCUMULATE_GRAD_BATCHES = 2
+    elif(model_config.MODEL_SIZE == "medium"):
+        model_config.BATCH_SIZE = 128
+        model_config.ACCUMULATE_GRAD_BATCHES = 4
+    elif(model_config.MODEL_SIZE == "large"):
+        model_config.BATCH_SIZE = 64
+        model_config.ACCUMULATE_GRAD_BATCHES = 8
 
     run(model_config)
