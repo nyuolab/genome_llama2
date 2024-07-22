@@ -22,6 +22,13 @@ To tokenize the pre-training data, use the following command:
 python tokenize_data.py --train_data_path /path/to/pre_training_data --tokenized_dataset_path /path/to/store/tokenized_data
 ```
 
+The full list of flags and options for tokenizing a genome dataset is as follows:
+```
+--train_data_path: Path to the training data.
+--tokenized_dataset_path: Path to the directory where tokenized dataset will be saved.
+--context_length: Context length (number of tokens) in each sequence (default: 128)
+```
+
 To pre-train the model, use this command:
 ```bash
 python train_model.py --tokenized_dataset_path /path/to/tokenized_dataset --checkpoint_dir_path /path/to/store/checkpoints --log_dir_path /path/to/store/logs
@@ -35,6 +42,7 @@ The full list of flags and options for pre-training Genome-Llama-2 is as follows
 --n_nodes: Number of nodes to be used in the training process.
 --n_gpus: Number of GPUs to be used per node. Use -1 to utilize all available GPUs.
 --model_size: Size of the model to be used: base, medium, or large.
+--context_length: Context length (number of tokens) in each sequence (default: 128)
 ```
 
 ## Todos
