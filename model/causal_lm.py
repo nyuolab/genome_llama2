@@ -7,8 +7,9 @@ from lightning.pytorch import LightningModule
 from torch.utils.data.distributed import DistributedSampler
 from torch.optim.lr_scheduler import OneCycleLR
 
-# Define a LightningModule for training a Llama-2 model with genome data
-class GenomeLlama2(LightningModule):
+class GenomeLlama2ForCausalLM(LightningModule):
+    """A LightningModule for pretraining a Llama-2 Causal LM with genome data"""
+
     def __init__(self, tokenizer, model_config):
         super().__init__()
         self.model = None
@@ -20,8 +21,9 @@ class GenomeLlama2(LightningModule):
         self.valid_sampler = None
         self.data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-    # Set up the datasets and samplers
     def setup(self, stage=None):
+        """Set up the datasets and samplers"""
+
         # Assuming the dataset is already prepared and saved on disk
         if stage == "fit" or stage is None:
             tokenized_genome_dataset = load_from_disk(self.model_config.TOKENIZED_DATASET_PATH)
@@ -30,33 +32,33 @@ class GenomeLlama2(LightningModule):
             self.train_sampler = DistributedSampler(self.genome_train, shuffle=True)
             self.valid_sampler = DistributedSampler(self.genome_valid, shuffle=False)
 
-    # Forward pass of the model
     def forward(self, input_ids, attention_mask, labels):
+        """Forward pass of the model"""
         output = self.model(input_ids, attention_mask=attention_mask, labels=labels)
         return output.loss, output.logits
 
-    # Helper function to compute the loss for a batch
     def _step(self, batch):
+        """Helper function to compute the loss for a batch"""
         input_ids = batch['input_ids']
         attention_mask = batch['attention_mask']
         labels = batch['labels']
         loss, _ = self(input_ids, attention_mask, labels)
         return loss
 
-    # Training step
     def training_step(self, batch, batch_idx):
+        """Training step"""
         loss = self._step(batch)
         self.log('train_loss', loss, prog_bar=True) # Log the training loss
         return loss
-
-    # Validation step
+    
     def validation_step(self, batch, batch_idx):
+        """Validation step"""
         loss = self._step(batch)
         self.log('val_loss', loss, prog_bar=True, sync_dist=True) # Log the validation loss
         return loss
     
-    # Configure the model with specific parameters to match the architecture of DNABERT-2
     def configure_model(self):
+        """Configure the model with specific parameters to match the architecture of DNABERT-2"""
         if self.model is not None:
             return
         
@@ -66,7 +68,6 @@ class GenomeLlama2(LightningModule):
             vocab_size=len(self.tokenizer),
             n_ctx=self.model_config.CONTEXT_LENGTH
         )
-
 
         # Set the model parameters
         # Total number of parameters: 119 M
@@ -101,20 +102,30 @@ class GenomeLlama2(LightningModule):
         # Initialize the model with the configured settings
         self.model = LlamaForCausalLM(config)
 
-    # Configure the optimizer and learning rate scheduler
     def configure_optimizers(self):
+        """Configure the optimizer and learning rate scheduler"""
+
+        # Explicitly cast config values to float and int
+        lr_max = float(self.model_config.LR_MAX)
+        betas = tuple(map(float, self.model_config.BETAS))
+        eps = float(self.model_config.EPS)
+        weight_decay = float(self.model_config.WEIGHT_DECAY)
+        warm_up = float(self.model_config.WARM_UP)
+        steps = int(self.model_config.STEPS)
+
+
         optimizer = torch.optim.AdamW(self.parameters(), 
-                                     lr=self.model_config.LR_MAX, 
-                                     betas=self.model_config.BETAS, 
-                                     eps=self.model_config.EPS, 
-                                     weight_decay=self.model_config.WEIGHT_DECAY)
+                                     lr=lr_max, 
+                                     betas=betas, 
+                                     eps=eps, 
+                                     weight_decay=weight_decay)
 
         scheduler = OneCycleLR(
             optimizer,
-            max_lr = self.model_config.LR_MAX, # Upper learning rate boundaries in the cycle for each parameter group
-            total_steps = self.model_config.STEPS, # Total number of steps to train for.
+            max_lr = lr_max, # Upper learning rate boundaries in the cycle for each parameter group
+            total_steps = steps, # Total number of steps to train for.
             anneal_strategy = 'linear',
-            pct_start = float(self.model_config.WARM_UP/self.model_config.STEPS))
+            pct_start = float(warm_up/steps))
 
         lr_scheduler = {
             'scheduler': scheduler,
@@ -124,10 +135,10 @@ class GenomeLlama2(LightningModule):
 
         return [optimizer], [lr_scheduler]
     
-    # Create a DataLoader for the training set
     def train_dataloader(self):
+        """Create a DataLoader for the training set"""
         return DataLoader(self.genome_train, batch_size=self.model_config.BATCH_SIZE, num_workers = self.model_config.NUM_WORKERS, sampler=self.train_sampler, shuffle=(self.train_sampler is None), pin_memory=True, collate_fn=self.data_collator)
 
-    # Create a DataLoader for the validation set
     def val_dataloader(self):
+        """Create a DataLoader for the validation set"""
         return DataLoader(self.genome_valid, batch_size=self.model_config.BATCH_SIZE, sampler=self.valid_sampler, num_workers = self.model_config.NUM_WORKERS, shuffle=False, pin_memory=True, collate_fn=self.data_collator)

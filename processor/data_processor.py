@@ -1,18 +1,17 @@
 import os
 from datasets import load_dataset
 
-# Define a class to process genome sequence datasets
 class GenomeSequenceProcessor:
+    """A class to process genome sequence datasets"""
 
     def __init__(self, dir_path):
-        # Initialize the directory path
         self.dir_path = dir_path
-        # Initialize attributes for storing datasets
         self.train_dataset = None
         self.valid_dataset = None
 
-    # Load genome sequence datasets from specified files
     def load_genome_dataset(self):
+        """Load genome sequence datasets from specified files"""
+
         # Define the paths for the train and validation datasets
         train_file_path = os.path.join(self.dir_path, 'train.txt')
         valid_file_path = os.path.join(self.dir_path, 'dev.txt')

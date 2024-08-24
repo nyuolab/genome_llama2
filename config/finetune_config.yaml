@@ -1,0 +1,32 @@
+# Constants related to the DNA sequences and model
+CONTEXT_LENGTH: 512
+LLM_MODEL: "meta-llama/Llama-2-7b-hf"
+
+# File paths
+FINETUNE_DATA_DIR_PATH: "" # Specify the absolute or relative path to the directory containing your finetuning data (e.g., /path/to/finetune/data)
+TOKENIZER_PATH: "genome_llama2/tokenization/tokenizer"
+CHECKPOINT_DIR: "genome_llama2_checkpoint"
+LOG_DIR: "genome_llama2_tb_logs"
+
+# Model Type
+MODEL_SIZE: "base"
+
+# Training arguments
+STEPS: 100
+NUM_NODES: 1
+GPUS: -1
+LR_MAX: 3e-5
+WARM_UP: 50
+BETAS: [0.9, 0.98]
+EPS: 1e-6
+WEIGHT_DECAY: 0.01
+PRECISION: "bf16-mixed"
+BATCH_SIZE: 32
+NUM_WORKERS: 0
+ACCUMULATE_GRAD_BATCHES: 1
+GRADIENT_CLIP_VAL: 1.0
+ENABLE_CHECKPOINTING: True
+PROFILER: 'advanced'
+
+# Set seed for reproducibility
+SEED: 1234
