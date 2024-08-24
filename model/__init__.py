@@ -1,1 +1,2 @@
-from .model import GenomeLlama2
+from .causal_lm import GenomeLlama2ForCausalLM
+from .classification_model import GenomeLlama2ForClassification

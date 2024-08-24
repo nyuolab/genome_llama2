@@ -1,0 +1,32 @@
+CONTEXT_LENGTH: 128
+LLM_MODEL: "meta-llama/Llama-2-7b-hf"
+
+# File paths
+RAW_TRAIN_DATA_DIR_PATH: "" # Specify the absolute or relative path to the directory containing your pretraining data (e.g., /path/to/pretrain/data)
+TOKENIZER_PATH: "genome_llama2/tokenizer"
+TOKENIZED_DATASET_PATH: "genome_tokenized_dataset"
+CHECKPOINT_DIR: "genome_llama2_checkpoint"
+LOG_DIR: "genome_llama2_tb_logs"
+
+# Model Type
+MODEL_SIZE: "base"
+
+# Training arguments
+STEPS: 40000
+NUM_NODES: 1
+GPUS: -1
+LR_MAX: 5e-4
+WARM_UP: 30000
+BETAS: [0.9, 0.98]
+EPS: 1e-6
+WEIGHT_DECAY: 1e-5
+PRECISION: "bf16-mixed"
+BATCH_SIZE: 256
+NUM_WORKERS: 0
+ACCUMULATE_GRAD_BATCHES: 2
+GRADIENT_CLIP_VAL: 1.0
+ENABLE_CHECKPOINTING: True
+PROFILER: 'advanced'
+
+# Set seed for reproducibility
+SEED: 1234
